@@ -1,0 +1,162 @@
+
+[2025-08-20 02:05:01]
+✅ pandas already installed.
+----------------------------------------
+
+[2025-08-20 02:05:02]
+📦 Installing PyMuPDF ...
+----------------------------------------
+
+[2025-08-20 02:05:16]
+📜 Executing Code:
+import pandas as pd
+import fitz  # PyMuPDF
+
+# Extract basic info from CSV
+csv_preview = (
+    pd.read_csv("uploads/752c26ea-0b84-48ea-82eb-94256468b969/employees.csv")
+    .head(3)
+    .to_string()
+)
+
+# Extract basic info from PDF
+pdf_preview = ""
+try:
+    with fitz.open(
+        "uploads/752c26ea-0b84-48ea-82eb-94256468b969/annual_report.pdf"
+    ) as doc:
+        if len(doc) > 0:
+            page = doc.load_page(0)
+            pdf_preview = page.get_text("text")[:500]  # First 500 characters
+        else:
+            pdf_preview = "PDF is empty or could not be read."
+except Exception as e:
+    pdf_preview = f"Error reading PDF: {e}"
+
+# Append info to metadata.txt
+with open("uploads/752c26ea-0b84-48ea-82eb-94256468b969/metadata.txt", "a") as f:
+    f.write("--- CSV Preview ---\n")
+    f.write(csv_preview + "\n\n")
+    f.write("--- PDF Preview ---\n")
+    f.write(pdf_preview + "\n\n")
+
+print("Basic info extracted and saved to metadata.txt")
+
+----------------------------------------
+
+[2025-08-20 02:05:21]
+✅ Code executed successfully:
+Basic info extracted and saved to metadata.txt
+
+----------------------------------------
+
+[2025-08-20 02:05:37]
+✅ pandas already installed.
+----------------------------------------
+
+[2025-08-20 02:05:37]
+✅ matplotlib already installed.
+----------------------------------------
+
+[2025-08-20 02:05:37]
+📦 Installing PyMuPDF ...
+----------------------------------------
+
+[2025-08-20 02:05:43]
+📜 Executing Code:
+import pandas as pd
+import matplotlib.pyplot as plt
+import base64
+import io
+import fitz  # PyMuPDF
+import re
+import json
+
+# --- Part 1: Analyze employees.csv ---
+
+# Read the CSV file
+df = pd.read_csv("uploads/752c26ea-0b84-48ea-82eb-94256468b969/employees.csv")
+
+# 1. Calculate average salary per department
+avg_salary = df.groupby("Department")["Salary"].mean().to_dict()
+
+# 2. Generate a pie chart of headcount by department
+headcount = df["Department"].value_counts()
+plt.figure(figsize=(8, 6))
+plt.pie(headcount, labels=headcount.index, autopct="%1.1f%%", startangle=140)
+plt.title("Headcount by Department")
+plt.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+# Save plot to a bytes buffer and encode in base64
+buf = io.BytesIO()
+plt.savefig(buf, format="png")
+plt.close()
+buf.seek(0)
+pie_chart_base64 = base64.b64encode(buf.read()).decode("utf-8")
+buf.close()
+
+# --- Part 2: Extract data from annual_report.pdf ---
+
+revenue = None
+net_profit = None
+
+try:
+    with fitz.open(
+        "uploads/752c26ea-0b84-48ea-82eb-94256468b969/annual_report.pdf"
+    ) as doc:
+        full_text = ""
+        for page in doc:
+            full_text += page.get_text()
+
+    # Use regex to find revenue and net profit values like $X.XM
+    revenue_match = re.search(
+        r"Revenue\s*\n\s*\$([\d.]+)(M|B)", full_text, re.IGNORECASE
+    )
+    if revenue_match:
+        value = float(revenue_match.group(1))
+        unit = revenue_match.group(2).upper()
+        if unit == "M":
+            revenue = value * 1_000_000
+        elif unit == "B":
+            revenue = value * 1_000_000_000
+
+    net_profit_match = re.search(
+        r"Net Profit\s*\n\s*\$([\d.]+)(M|B)", full_text, re.IGNORECASE
+    )
+    if net_profit_match:
+        value = float(net_profit_match.group(1))
+        unit = net_profit_match.group(2).upper()
+        if unit == "M":
+            net_profit = value * 1_000_000
+        elif unit == "B":
+            net_profit = value * 1_000_000_000
+
+except Exception as e:
+    print(f"Error processing PDF: {e}")
+
+# --- Part 3: Save results to result.json ---
+
+final_results = [avg_salary, pie_chart_base64, [revenue, net_profit]]
+
+with open("uploads/752c26ea-0b84-48ea-82eb-94256468b969/result.json", "w") as f:
+    json.dump(final_results, f, indent=4)
+
+print("Analysis complete. Results saved to result.json")
+
+----------------------------------------
+
+[2025-08-20 02:05:52]
+✅ Code executed successfully:
+Analysis complete. Results saved to result.json
+
+----------------------------------------
+
+[2025-08-20 02:06:00]
+📜 Executing Code:
+
+----------------------------------------
+
+[2025-08-20 02:06:00]
+✅ Code executed successfully:
+
+----------------------------------------

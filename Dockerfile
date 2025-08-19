@@ -4,7 +4,7 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (can be useful for some Python libraries)
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -17,12 +17,23 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
-COPY app.py .
-COPY index.html .
+# --- MODIFIED SECTION START ---
+
+# Copy all application source files
+COPY main.py .
+COPY gemini.py .
+COPY task_engine.py .
+COPY api_key_rotator.py .
+COPY frontend.html .
+
+# Copy entrypoint script
 COPY entrypoint.sh .
 
-# Copy environment file if it exists
+# --- MODIFIED SECTION END ---
+
+
+# Copy environment file if it exists (for local builds)
+# Note: For production, use managed environment variables instead.
 COPY .env* ./
 
 # Make entrypoint script executable
