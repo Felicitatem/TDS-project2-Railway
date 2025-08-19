@@ -74,9 +74,15 @@ def strip_base64_from_json(data: dict) -> dict:
     return _process_value(data)
 
 
+# --- Root route for GET/POST ---
+@app.get("/")
+async def root_get():
+    return PlainTextResponse("Hello! Send POST to /api with files.")
 
+@app.post("/")
+async def root_post():
+    return PlainTextResponse("POST received. Please use /api for file uploads.")
 
-# venv_cycle = itertools.cycle(VENV_PATHS)
 
 @app.post("/api")
 async def analyze(request: Request):
@@ -515,7 +521,15 @@ async def analyze(request: Request):
 
         main_loop += 1
 
-     
+    
+    
+@app.api_route("/{path_name:path}", methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS"])
+async def catch_all(request: Request):
+    return JSONResponse({
+        "error": "Endpoint not recognized",
+        "method": request.method,
+        "path": request.url.path
+    }, status_code=404)
 
 if __name__ == "__main__":
     import uvicorn
