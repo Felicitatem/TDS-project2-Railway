@@ -1,9 +1,8 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import uuid
-from fastapi import FastAPI, Request
 from dotenv import load_dotenv 
 load_dotenv()
 import sys
@@ -16,11 +15,18 @@ import aiofiles
 import time
 import itertools
 import re
-
 from task_engine import run_python_code
 from gemini import parse_question_with_llm
 
 app = FastAPI()
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    # Log the error if you want
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal Server Error", "details": str(exc)}
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,33 +94,31 @@ async def root_post():
 async def analyze(request: Request):
     main_loop = 0
     while main_loop < 3:
+        # Create a unique folder for this request
+        request_id = str(uuid.uuid4())
+        request_folder = os.path.join(UPLOAD_DIR, request_id)
+        os.makedirs(request_folder, exist_ok=True)
+
+        # Setting up file for llm response
+        llm_response_file_path = os.path.join(request_folder, "llm_response.txt")
+
+        # Setup logging for this request
+        log_path = os.path.join(request_folder, "app.log")
+        logger = logging.getLogger(request_id)
+        logger.setLevel(logging.INFO)
+        # Remove previous handlers if any (avoid duplicate logs)
+        if logger.hasHandlers():
+            logger.handlers.clear()
+        file_handler = logging.FileHandler(log_path)
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        # Also log to console
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+
         try:
-            # Create a unique folder for this request
-            request_id = str(uuid.uuid4())
-            request_folder = os.path.join(UPLOAD_DIR, request_id)
-            os.makedirs(request_folder, exist_ok=True)
-
-            # Setting up file for llm response
-            llm_response_file_path = os.path.join(request_folder, "llm_response.txt")
-
-            
-
-            # Setup logging for this request
-            log_path = os.path.join(request_folder, "app.log")
-            logger = logging.getLogger(request_id)
-            logger.setLevel(logging.INFO)
-            # Remove previous handlers if any (avoid duplicate logs)
-            if logger.hasHandlers():
-                logger.handlers.clear()
-            file_handler = logging.FileHandler(log_path)
-            formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-            # Also log to console
-            stream_handler = logging.StreamHandler()
-            stream_handler.setFormatter(formatter)
-            logger.addHandler(stream_handler)
-
             logger.info("Step-1: Folder created: %s", request_folder)
 
             form = await request.form()
@@ -263,7 +267,7 @@ async def analyze(request: Request):
             '   "libraries": ["list", "of", "external_libraries"],\n'
             '   "run_this": 0 or 1\n'
             "}"
-        )
+            )
 
                     logger.error("❌🤖 Step-1: Error in parsing the result. %s", retry_message)
                 attempt += 1
@@ -516,9 +520,11 @@ async def analyze(request: Request):
                                 f.write('{message:"No result found. Please start over."}')
                             runner = 1
         except Exception as e:
-            logger.error(f"❌ Error occurred in main funtion : {e}")
-            pass
-
+            logger.error(f"💥 An unexpected error occurred in the main 'analyze' function: {e}", exc_info=True)
+            return JSONResponse(
+                status_code=500,
+                content={"message": "An internal server error occurred.", "error": str(e)}
+            )
         main_loop += 1
 
     
