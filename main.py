@@ -86,8 +86,8 @@ async def root_get():
     return PlainTextResponse("Hello! Send POST to /api with files.")
 
 @app.post("/")
-async def root_post():
-    return PlainTextResponse("POST received. Please use /api for file uploads.")
+async def root_post(request: Request):
+    return await analyze(request)
 
 
 @app.post("/api")
